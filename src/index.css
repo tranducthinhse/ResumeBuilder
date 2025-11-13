@@ -1,0 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Reset nhẹ để đồng bộ với Tailwind */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  width: 100%;
+}
+
+/* Tùy chọn: màu nền mặc định sáng */
+body {
+  background-color: #f9fafb; /* màu nền sáng nhẹ */
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  color: #111827; /* text-gray-900 */
+}
+
+.inp {
+  @apply w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2
+         focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition;
+}
+/* Input style chung (Style A clean minimal) */
+.inp {
+  @apply w-full bg-white border border-gray-200 rounded-lg px-3 py-2
+         focus:ring-2 focus:ring-blue-300 focus:border-transparent transition;
+}
+
+/* Card */
+.card {
+  @apply bg-white border border-gray-100 rounded-2xl p-6 shadow-sm;
+}
+
+
