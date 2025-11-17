@@ -6,6 +6,8 @@ import { useNavigate, Link } from "react-router-dom";
 import { FcGoogle } from "react-icons/fc";
 import { SiLinkedin } from "react-icons/si";
 import { useAuth } from "../../context/AuthContext";
+import fetch from "node-fetch";
+import * as functions from "firebase-functions";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -42,11 +44,13 @@ export default function Login() {
   // =========================
   // LOGIN LINKEDIN (OAuth)
   // =========================
-  const LINKEDIN_CLIENT_ID = "LI_CLIENT_ID";
-  const REDIRECT_URL = "https://<project>.web.app/auth/linkedin";
-  const FUNCTION_URL = "https://<region>-<project>.cloudfunctions.net/linkedinAuth";
+  const LINKEDIN_CLIENT_ID = "773wzhxigm4m7q";
+  const REDIRECT_URL = "http://localhost:5173/auth/linkedin";
+  const FUNCTION_URL =
+    "https://<your-region>-<your-project-id>.cloudfunctions.net/linkedinAuth";
 
-  const handleLinkedIn = () => {
+  const handleLinkedIn = async () => {
+    // Bước 1: mở popup LinkedIn
     const linkedinUrl =
       "https://www.linkedin.com/oauth/v2/authorization?" +
       new URLSearchParams({
@@ -58,16 +62,28 @@ export default function Login() {
 
     const popup = window.open(linkedinUrl, "_blank", "width=600,height=600");
 
-    window.addEventListener("message", async (event) => {
-      if (event.data?.token) {
-        try {
-          await signInWithCustomToken(auth, event.data.token);
+    // Bước 2: theo dõi URL popup
+    const timer = setInterval(async () => {
+      try {
+        const currentUrl = popup.location.href;
+        if (currentUrl.startsWith(REDIRECT_URL)) {
+          const urlParams = new URL(currentUrl).searchParams;
+          const code = urlParams.get("code");
+          popup.close();
+          clearInterval(timer);
+
+          // Bước 3: gọi Firebase Function để đổi code → token
+          const res = await fetch(`${FUNCTION_URL}?code=${code}`);
+          const data = await res.json();
+
+          // Bước 4: đăng nhập Firebase bằng custom token
+          await signInWithCustomToken(auth, data.token);
           nav("/dashboard");
-        } catch (e) {
-          setError("Không thể đăng nhập bằng LinkedIn!");
         }
+      } catch (err) {
+        // bỏ qua lỗi cross-origin đến khi redirect
       }
-    });
+    }, 1000);
   };
 
   // =========================
