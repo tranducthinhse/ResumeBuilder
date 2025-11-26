@@ -1,6 +1,6 @@
 [
   {
-    "origin": ["http://localhost:5173"],
+    "origin": ["https://resumedt.netlify.app"],
     "method": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     "maxAgeSeconds": 3600
   }
