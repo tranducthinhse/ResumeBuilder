@@ -57,6 +57,7 @@ export default function Login() {
           redirectTo: window.location.origin + "/dashboard" 
       }
     });
+    nav("/dashboard");
     if (error) throw error;
   } catch (err) {
     setError("Lỗi kết nối: " + err.message);
