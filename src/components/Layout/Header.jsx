@@ -1,6 +1,7 @@
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { FaUserCircle } from "react-icons/fa"; // ✅ Import thêm icon này
 
 export default function Header() {
   const { user, logout } = useAuth();
@@ -18,13 +19,25 @@ export default function Header() {
         <nav className="flex items-center gap-4">
           {user ? (
             <div className="flex items-center gap-3">
-              <img
-                src={user.avatar || "https://via.placeholder.com/32"}
-                alt="avatar"
-                className="w-8 h-8 rounded-full border"
-              />
-              <span className="text-gray-700 text-sm hidden sm:inline">
-                {user.isGuest ? "Guest User" : user.email}
+              
+              {/* 👇 SỬA LỖI Ở ĐÂY: Nếu có avatar thì hiện ảnh, không thì hiện Icon */}
+              {user.avatar ? (
+                <img
+                  src={user.avatar}
+                  alt="avatar"
+                  className="w-8 h-8 rounded-full border object-cover"
+                  onError={(e) => {
+                    // Nếu link ảnh bị lỗi, tự động ẩn đi và hiện icon thay thế (hoặc thay bằng ảnh default khác)
+                    e.target.style.display = 'none'; 
+                    // Mẹo: Bạn có thể render FaUserCircle ngay bên cạnh nếu muốn fallback phức tạp hơn
+                  }}
+                />
+              ) : (
+                <FaUserCircle size={32} className="text-gray-400" />
+              )}
+
+              <span className="text-gray-700 text-sm hidden sm:inline font-medium">
+                {user.isGuest ? "Khách (Guest)" : user.email?.split('@')[0]}
               </span>
 
               {!user.isGuest && (
@@ -32,7 +45,7 @@ export default function Header() {
                   onClick={handleEditProfile}
                   className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded-lg transition text-sm"
                 >
-                  Chỉnh sửa hồ sơ
+                  Hồ sơ
                 </button>
               )}
 

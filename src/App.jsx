@@ -1,4 +1,3 @@
-// src/App.jsx
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -9,26 +8,46 @@ import CreateCV from "./pages/CreateCV";
 import ViewCV from "./pages/ViewCV";
 import Header from "./components/Layout/Header";
 import Profile from "./pages/Profile";
+import Editor from "./pages/Editor"; 
+import CompareCV from "./pages/CompareCV"; // ✅ Đã import trang so sánh
 
 function PrivateRoute({ children }) {
   const { user } = useAuth();
+  // Đợi loading xong mới check user (tránh đá ra login oan)
+  // Tuy nhiên ở đây ta check đơn giản:
   return user ? children : <Navigate to="/login" />;
 }
 
-// Component layout để xác định trang nào cần căn giữa
+// Component layout xử lý hiển thị (Full màn hình cho Editor/Compare)
 function Layout({ children }) {
   const location = useLocation();
-  const centerRoutes = ["/login", "/register"];
-  const isCentered = centerRoutes.includes(location.pathname);
+  
+  const isAuthPage = ["/login", "/register"].includes(location.pathname);
+  
+  // Các trang cần không gian rộng (ẩn container giới hạn)
+  const isFullWidthPage = 
+      location.pathname.startsWith("/editor") || 
+      location.pathname.startsWith("/compare");
 
+  if (isAuthPage) {
+    return (
+      <main className="min-h-screen flex justify-center items-center bg-gray-100">
+        {children}
+      </main>
+    );
+  }
+
+  if (isFullWidthPage) {
+    return (
+      <main className="h-screen bg-gray-100 overflow-hidden"> 
+        {children}
+      </main>
+    );
+  }
+
+  // Các trang thường (Dashboard, Profile...)
   return (
-    <main
-      className={
-        isCentered
-          ? "min-h-screen flex justify-center items-center bg-gray-100"
-          : "container mx-auto p-4"
-      }
-    >
+    <main className="container mx-auto p-4 pb-20">
       {children}
     </main>
   );
@@ -41,6 +60,14 @@ export default function App() {
         <Header />
         <Layout>
           <Routes>
+            {/* Public Routes */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            
+            {/* Route xem CV công khai (không cần PrivateRoute để người lạ xem được) */}
+            <Route path="/view/:id" element={<ViewCV />} />
+
+            {/* Private Routes */}
             <Route
               path="/profile"
               element={
@@ -49,8 +76,7 @@ export default function App() {
                 </PrivateRoute>
               }
             />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
+            
             <Route
               path="/dashboard"
               element={
@@ -59,15 +85,36 @@ export default function App() {
                 </PrivateRoute>
               }
             />
+
             <Route
-              path="/create"
+              path="/editor/new"
               element={
                 <PrivateRoute>
                   <CreateCV />
                 </PrivateRoute>
               }
             />
-            <Route path="/view/:uid/:cvId" element={<ViewCV />} />
+
+            <Route
+              path="/editor/:id"
+              element={
+                <PrivateRoute>
+                  <Editor />
+                </PrivateRoute>
+              }
+            />
+
+            {/* ✅ Route So sánh (FR-4.2) */}
+            <Route 
+               path="/compare/:id1/:id2" 
+               element={
+                  <PrivateRoute>
+                     <CompareCV />
+                  </PrivateRoute>
+               } 
+            />
+
+            {/* Fallback */}
             <Route path="*" element={<Navigate to="/dashboard" />} />
           </Routes>
         </Layout>

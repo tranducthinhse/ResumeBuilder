@@ -1,104 +1,81 @@
-// src/components/Auth/Login.jsx
 import React, { useState } from "react";
-import { signInWithEmailAndPassword, signInWithPopup, signInWithCustomToken } from "firebase/auth";
-import { auth, provider } from "../../services/firebase";
+// 👇 Import Supabase (Lưu ý đường dẫn ../../)
+import { supabase } from "../../services/supabase";
 import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 import { FcGoogle } from "react-icons/fc";
 import { SiLinkedin } from "react-icons/si";
-import { useAuth } from "../../context/AuthContext";
-import fetch from "node-fetch";
-import * as functions from "firebase-functions";
+import { FaLock } from "react-icons/fa";
 
+// 👇 QUAN TRỌNG: Phải có chữ "default" ở đây
 export default function Login() {
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const nav = useNavigate();
-  const { startGuest } = useAuth(); // Lấy hàm Guest từ context
+  const { startGuest } = useAuth();
 
   // =========================
-  // LOGIN EMAIL
+  // LOGIN EMAIL (Supabase)
   // =========================
-  const handleEmail = async (e) => {
+  const handleEmailLogin = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setError("");
+
     try {
-      await signInWithEmailAndPassword(auth, email, pass);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email,
+        password: pass,
+      });
+
+      if (error) throw error;
       nav("/dashboard");
     } catch (err) {
-      setError("Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin!");
-    }
-  };
-
-  // =========================
-  // LOGIN GOOGLE
-  // =========================
-  const handleGoogle = async () => {
-    try {
-      await signInWithPopup(auth, provider);
-      nav("/dashboard");
-    } catch (err) {
-      setError("Không thể đăng nhập bằng Google. Thử lại sau!");
-    }
-  };
-
-  // =========================
-  // LOGIN LINKEDIN (OAuth)
-  // =========================
-  const LINKEDIN_CLIENT_ID = "773wzhxigm4m7q";
-  const REDIRECT_URL = "http://localhost:5173/auth/linkedin";
-  const FUNCTION_URL =
-    "https://<your-region>-<your-project-id>.cloudfunctions.net/linkedinAuth";
-
-  const handleLinkedIn = async () => {
-    // Bước 1: mở popup LinkedIn
-    const linkedinUrl =
-      "https://www.linkedin.com/oauth/v2/authorization?" +
-      new URLSearchParams({
-        response_type: "code",
-        client_id: LINKEDIN_CLIENT_ID,
-        redirect_uri: REDIRECT_URL,
-        scope: "r_liteprofile r_emailaddress",
-      }).toString();
-
-    const popup = window.open(linkedinUrl, "_blank", "width=600,height=600");
-
-    // Bước 2: theo dõi URL popup
-    const timer = setInterval(async () => {
-      try {
-        const currentUrl = popup.location.href;
-        if (currentUrl.startsWith(REDIRECT_URL)) {
-          const urlParams = new URL(currentUrl).searchParams;
-          const code = urlParams.get("code");
-          popup.close();
-          clearInterval(timer);
-
-          // Bước 3: gọi Firebase Function để đổi code → token
-          const res = await fetch(`${FUNCTION_URL}?code=${code}`);
-          const data = await res.json();
-
-          // Bước 4: đăng nhập Firebase bằng custom token
-          await signInWithCustomToken(auth, data.token);
-          nav("/dashboard");
-        }
-      } catch (err) {
-        // bỏ qua lỗi cross-origin đến khi redirect
+      if (err.message.includes("Invalid login credentials")) {
+        setError("Email hoặc mật khẩu không đúng.");
+      } else if (err.message.includes("Email not confirmed")) {
+        setError("Vui lòng kích hoạt email trước khi đăng nhập.");
+      } else {
+        setError("Đăng nhập thất bại: " + err.message);
       }
-    }, 1000);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  // =========================
+  // LOGIN SOCIAL (Google/LinkedIn)
+  // =========================
+  const handleSocialLogin = async (provider) => {
+  try {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: provider, // 'google'
+      options: {
+          // Supabase sẽ tự động dùng Redirect URI đã cấu hình ở Bước 3
+          redirectTo: window.location.origin + "/dashboard" 
+      }
+    });
+    if (error) throw error;
+  } catch (err) {
+    setError("Lỗi kết nối: " + err.message);
+  }
+};
 
   // =========================
   // GUEST MODE
   // =========================
   const handleGuest = () => {
-    startGuest(); // ✅ update state và localStorage
+    startGuest();
     nav("/dashboard");
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <div className="bg-white shadow-lg rounded-2xl w-full max-w-md p-8">
-        <h2 className="text-2xl font-bold text-center mb-6 text-gray-800">
-          🔐 Đăng nhập tài khoản
+        <h2 className="text-2xl font-bold text-center mb-6 text-gray-800 flex items-center justify-center gap-2">
+          <FaLock className="text-blue-600" /> Đăng nhập
         </h2>
 
         {error && (
@@ -108,7 +85,7 @@ export default function Login() {
         )}
 
         {/* FORM LOGIN EMAIL */}
-        <form onSubmit={handleEmail} className="flex flex-col gap-4">
+        <form onSubmit={handleEmailLogin} className="flex flex-col gap-4">
           <input
             type="email"
             value={email}
@@ -127,31 +104,37 @@ export default function Login() {
           />
           <button
             type="submit"
-            className="p-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition duration-200"
+            disabled={loading}
+            className={`p-3 text-white font-semibold rounded-lg transition duration-200 ${
+              loading ? "bg-blue-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
+            }`}
           >
-            Đăng nhập
+            {loading ? "Đang xử lý..." : "Đăng nhập"}
           </button>
         </form>
 
-        {/* GOOGLE LOGIN */}
-        <div className="mt-5">
-          <button
-            onClick={handleGoogle}
-            className="w-full flex items-center justify-center gap-2 border border-gray-300 rounded-lg py-3 hover:bg-gray-50 transition duration-200"
-          >
-            <FcGoogle size={22} />
-            <span>Đăng nhập với Google</span>
-          </button>
+        <div className="flex items-center my-4">
+            <div className="flex-grow border-t border-gray-300"></div>
+            <span className="px-3 text-gray-500 text-sm">Hoặc</span>
+            <div className="flex-grow border-t border-gray-300"></div>
         </div>
 
-        {/* LINKEDIN LOGIN */}
-        <div className="mt-3">
+        {/* SOCIAL LOGIN */}
+        <div className="flex gap-3">
           <button
-            onClick={handleLinkedIn}
-            className="w-full flex items-center justify-center gap-2 border border-gray-300 rounded-lg py-3 hover:bg-blue-50 transition duration-200"
+            onClick={() => handleSocialLogin('google')}
+            className="flex-1 flex items-center justify-center gap-2 border border-gray-300 rounded-lg py-2 hover:bg-gray-50 transition"
+          >
+            <FcGoogle size={22} />
+            <span className="text-sm font-medium">Google</span>
+          </button>
+          
+          <button
+            onClick={() => handleSocialLogin('linkedin')}
+            className="flex-1 flex items-center justify-center gap-2 border border-gray-300 rounded-lg py-2 hover:bg-blue-50 transition"
           >
             <SiLinkedin size={20} color="#0A66C2" />
-            <span>Đăng nhập với LinkedIn</span>
+            <span className="text-sm font-medium">LinkedIn</span>
           </button>
         </div>
 
@@ -159,9 +142,9 @@ export default function Login() {
         <div className="mt-4">
           <button
             onClick={handleGuest}
-            className="w-full text-center py-3 bg-gray-200 hover:bg-gray-300 rounded-lg transition"
+            className="w-full text-center py-2 text-sm text-gray-600 hover:text-gray-800 underline decoration-dotted"
           >
-            Dùng thử (Guest Mode)
+            Dùng thử không cần đăng nhập (Guest Mode)
           </button>
         </div>
 
