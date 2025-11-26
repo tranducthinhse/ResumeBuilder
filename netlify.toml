@@ -12,7 +12,7 @@ publishOrigin = "ui"
 commandOrigin = "ui"
 command = "npm run build"
 
-[[redirects]]
+[redirects]
   from = "/*"
   to = "/index.html"
   status = 200
