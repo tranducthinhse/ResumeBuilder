@@ -1,21 +1,15 @@
 plugins = []
 headers = []
+redirects =[]
 
 [functions]
 
 [functions."*"]
 
 [build]
-publish = "C:\\HKI 2025-2026\\Chuyên đề Web\\resume-builder\\dist"
-publishOrigin = "ui"
-commandOrigin = "ui"
 command = "npm run build"
 
-[redirects]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-  force = true
+
 [build.environment]
 
 [build.processing]
